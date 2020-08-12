@@ -4,13 +4,18 @@
 #include <numeric>
 #include <iostream>
 
+// Hello, Objects
 #include "gameobj.hpp"
 
+// Standard values for the game
 #define LEVEL_ROUND 3
 #define LASER_COUNT 20
 #define MAX_LEVEL 30
+
+// DON'T CHANGE IF YOU'RE JUST RUNNING ON THE ROAD
 #define FORMULA (level % MAX_LEVEL) * ((LASER_COUNT - 3) / (float)MAX_LEVEL) + 1
 
+// Randoms lasers with above formula
 std::vector<unsigned int> randomLaser(std::vector<LaserWall>& laserWalls, unsigned int level)
 {
 	std::vector<unsigned int> list(LASER_COUNT);
@@ -21,6 +26,7 @@ std::vector<unsigned int> randomLaser(std::vector<LaserWall>& laserWalls, unsign
 	return std::vector<unsigned int>(list.begin(), list.begin() + FORMULA);
 }
 
+// Shortcut for loading assets
 #define LOAD_FROM_FILE(c,d) if(!c.loadFromFile(d)){std::cout<< "Error ! Cannot load \""<<d<<"\" !"<<std::endl;return-1;}
 
 unsigned int level;
@@ -31,7 +37,7 @@ float laserThickness;
 sf::Clock game_clock;
 sf::Text levelLabel;
 
-// For fun
+// For fun. if added on the game start. Like nextLevelBy(99999)
 void nextLevelBy(int lvl)
 {
 	round_ = 1;
@@ -46,11 +52,14 @@ void nextLevelBy(int lvl)
 
 int main()
 {
+	// Makes window
 	sf::RenderWindow window(sf::VideoMode((LASER_COUNT + 1) * 32, (LASER_COUNT + 1) * 32), "cppLaserGame - Laser Rush", sf::Style::Titlebar | sf::Style::Close);
+
+	// Limits FPS to 60. if i wasn't set here. It costs GPU usage over 50% with 2000fps+
 	window.setFramerateLimit(60);
 	window.setVerticalSyncEnabled(true);
 
-	// Sprites
+	// Prepares for textures and font
 	sf::Texture t_Wall;
 	LOAD_FROM_FILE(t_Wall, "Assets/wall.png")sf::Sprite s_Wall;
 	s_Wall.setTexture(t_Wall, true);
@@ -74,13 +83,14 @@ int main()
 	LOAD_FROM_FILE(g_font, "Assets/SourceCodePro-Light.ttf");
 
 	/*
+	EVT (Event type) Definition
 		0 = READY
 		1 = FIRE LESER
 		2 = RESET
 		3 = GAME OVER
 	*/
 
-
+	// Creates Laser walls on horizontal and vertical
 	std::vector<LaserWall> laserwalls_hor(LASER_COUNT, LaserWall(s_laserWall, LaserWall::Horizontal, t_laserWall, t_laserWallNext, t_laserWallActivated));
 	std::vector<LaserWall> laserwalls_ver(LASER_COUNT, LaserWall(s_laserWall, LaserWall::Vertical, t_laserWall, t_laserWallNext, t_laserWallActivated));
 	std::vector<LaserWall*> laserwalls_tof;
@@ -88,6 +98,7 @@ int main()
 	const unsigned int spr_w = t_laserWall.getSize().x;
 	const unsigned int spr_h = t_laserWall.getSize().y;
 	unsigned int curr = 1;
+	// Place each to the room
 	for (auto& l : laserwalls_hor)
 	{
 		l.setPosition(curr * spr_w, 0);
@@ -101,6 +112,7 @@ int main()
 	}
 	sf::FloatRect rect;
 
+	// The jumper for restarting a game
 reset:
 	player.moveTo(sf::Vector2f(window.getSize().x / 2, window.getSize().y / 2));
 	player.died = false;
@@ -122,6 +134,7 @@ reset:
 		switch (evt)
 		{
 		case 0:
+			// Prepares lasers for activating
 			if (game_clock.getElapsedTime().asSeconds() >= std::max((2.0f - (float)round_ / LEVEL_ROUND) - time_, 1.0f))
 			{
 				for (auto i : randomLaser(laserwalls_hor, level))
@@ -139,6 +152,7 @@ reset:
 			}
 			break;
 		case 1:
+			// Activates lasers
 			if (game_clock.getElapsedTime().asSeconds() >= std::max((2.0f - (float)round_ / LEVEL_ROUND) - time_, 1.0f))
 			{
 				for (auto l : laserwalls_tof)
@@ -150,11 +164,13 @@ reset:
 			}
 			break;
 		case 2:
+			// Check if player touches one of lasers
 			for (auto l : laserwalls_tof)
 			{
+				
 				if (l->laser(player.getSprite(), window, laserThickness))
 				{
-					// Game Over
+					// Yes, You are lose. Waiting for respecting at case 3
 					player.died = true;
 					levelLabel.setString("GAME OVER");
 					levelLabel.setCharacterSize(72);
@@ -166,13 +182,17 @@ reset:
 				}
 			}
 
+			// Wait for 2 seconds
 			if (game_clock.getElapsedTime().asSeconds() >= 2.0f)
 			{
+				// Inactivates lasers
 				for (auto l : laserwalls_tof)
 				{
 					l->off();
 				}
 				laserwalls_tof.clear();
+
+				// If round counter is touched LEVEL_ROUND, Go to the next level and reset a round counter
 				if (round_ < LEVEL_ROUND)
 					round_++;
 				else
@@ -183,6 +203,7 @@ reset:
 				evt = 0;
 			}
 		case 3:
+			// After showing GAME OVER text for 3 seconds
 			if (game_clock.getElapsedTime().asSeconds() >= 3.0f)
 			{
 				// Restart a game
@@ -202,11 +223,14 @@ reset:
 				window.close();
 		}
 
+		// Moving a player to the mouse position
 		player.move(sf::Mouse::getPosition(window), t_laserWall.getSize().x, t_laserWall.getSize().y, window.getSize());
 
 		window.clear();
+		// Draw some floor. Made with TEXT
 		window.draw(levelLabel);
 
+		// Draw walls
 		for (auto& l : laserwalls_hor)
 		{
 			l.drawWall(window, laserThickness);
@@ -216,8 +240,9 @@ reset:
 			l.drawWall(window, laserThickness);
 		}
 
-
+		// Draw useless wall on the corner
 		window.draw(s_Wall);
+		// Draw me
 		player.draw(window);
 		window.display();
 	}
